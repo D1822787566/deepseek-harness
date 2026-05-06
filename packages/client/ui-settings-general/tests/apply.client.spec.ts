@@ -188,6 +188,26 @@ describe('ui-settings-general apply', () => {
     await vi.waitFor(() => { expect(c.mock.log.calls('settings/describe')).toHaveLength(3) })
   })
 
+  it('loads preferences in the opted-in remote composition without exposing the native document action', async ({ mock, start }) => {
+    const loopbackUrl = location.href
+    setPageUrl('http://198.51.100.7:3000/')
+    onTestFinished(() => { setPageUrl(loopbackUrl) })
+    vi.stubGlobal('__DSH_REMOTE_SETTINGS__', true)
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { c, settings } = await client(mock, start)
+    expect(c.connection.isLoopback).toBe(false)
+    expect(c.ctx.configForms.describe().getSnapshot().status).toBe('ready')
+    expect(c.ctx.locale.getSnapshot().active).toBe('zh')
+    expect(ownEntries(c, 'settings.action')).toEqual([])
+    settings.mutate.mockResolvedValueOnce(ok(localeView('en', 1)))
+    c.ctx.locale.setLocale('en')
+    await vi.waitFor(() => {
+      expect(settings.mutate).toHaveBeenCalledExactlyOnceWith(
+        LOCALE_SETTINGS_NAMESPACE, [{ op: 'set', path: ['preference'], value: 'en' }], 0,
+      )
+    })
+  })
+
   it('withholds the Host document action off-loopback', async ({ mock, start }) => {
     const loopbackUrl = location.href
     setPageUrl('http://198.51.100.7:3000/')

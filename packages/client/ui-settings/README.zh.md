@@ -27,6 +27,8 @@ kind: "package-reference"
 
 功能插件用本包存储与编辑自己的偏好设置，而无需重新实现传输层或 schema 处理。每个组合挂载一次即可；它注入 `remote` 服务及其 `settings` 命名空间，并持有浏览器中唯一的 `settings.describe` 读取方。
 
+部署可以通过独立的 `webserver/index-inject` 插件将布尔值 `__DSH_REMOTE_SETTINGS__` 发布为 `true`，让已认证的远程浏览器使用 Host 持久化表单。改变部署选择后需刷新页面。Connection 认证与 Host/Origin 校验仍然生效；浏览器的回环地址身份与打开本机文档的操作保持不变。应使用独立插件，而不是覆盖 `ui-settings`，因为这种 overlay 会使整个设置命名空间变为只读。下文关于远程内存持久化的描述指未显式启用时的默认行为。
+
 ### 配置表单
 
 `ctx.configForms.developerTools` 管理代码工作工具开关与 Web 和桌面端共享的偏好 `ui-settings.enabled`，默认为 `true`。其 `enabled` 可观察值发布已接受的选择，`setEnabled` 使用相同的有序设置写入。桌面端和回环 Web 将设置持久化到 Host 文档；远程 Web 将此选择保存在单个浏览器本地可观察值中，刷新后重置，不发送 Host 写入。此设置控制界面展示和 HTML 预览权限，不控制 Host 授权或 Session 记录。 使用 Host 偏好的客户端在首个经过 schema 解析并接受的值到达前保持开发者功能关闭；首次响应缺失或失败不会启用它们。后续刷新保留已接受的选择。
@@ -103,7 +105,7 @@ kind: "package-reference"
 
 这些限制说明设置传输层够不到的地方；它们是当前包约束。
 
-- **非 loopback 页面没有持久化设置**：本 Client 在那里禁用 Host 持久化，因此 表单以 `unavailable` 起步且从不跨线路；尽管 Connection 认证覆盖 API，表单写入仍在那里无效。共享的代码工作工具偏好单独提供浏览器本地变更。
+- **远程设置需要部署显式启用**：没有 Host 注入标记时，非回环地址的表单以 `unavailable` 起步，不发起 Host 读取或写入。共享的代码工作工具偏好单独提供浏览器本地变更。
 
 <a id="dev-note"></a>
 ### 开发备注

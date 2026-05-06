@@ -1,20 +1,40 @@
 import { Context } from '@deepseek-ai/cordis'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject } from '../src/client/index.ts'
 import { SettingsSchemaService } from '../src/client/schema.ts'
 import { ConfigForms } from '../src/client/config-form.ts'
 
-function bench() {
+function bench(isLoopback = true, allowRemoteSettings = false) {
   const describeCall = vi.fn().mockResolvedValue({
     ok: true, value: { writable: true, hasDocument: true, namespaces: [] },
   })
   const ctx = new Context()
   const remote = new TestRemote(ctx, { settings: { describe: describeCall } })
+  remote.$host.isLoopback = isLoopback
+  vi.stubGlobal('__DSH_REMOTE_SETTINGS__', allowRemoteSettings)
+  onTestFinished(() => { vi.unstubAllGlobals() })
+  onTestFinished(() => ctx.fiber.dispose())
   return { ctx, describeCall, remote, fiber: ctx.plugin({ inject: [...inject], apply }) }
 }
 
 describe('settings domain base plugin', () => {
+  it('keeps remote settings unavailable without the deployment opt-in', async () => {
+    const { ctx, describeCall, fiber } = bench(false)
+    await fiber.await()
+    await ctx.configForms.describe().ensure()
+    expect(ctx.configForms.describe().getSnapshot().status).toBe('unavailable')
+    expect(describeCall).not.toHaveBeenCalled()
+  })
+
+  it('loads Host settings for an opted-in remote browser without changing its loopback identity', async () => {
+    const { ctx, describeCall, remote, fiber } = bench(false, true)
+    await fiber.await()
+    await ctx.configForms.describe().ensure()
+    expect(ctx.configForms.describe().getSnapshot().status).toBe('ready')
+    expect(describeCall).toHaveBeenCalledTimes(1)
+    expect(remote.$host.isLoopback).toBe(false)
+  })
   it('mounts the scope service under configForms and reads once eagerly', async () => {
     const { ctx, describeCall, fiber } = bench()
     await fiber.await()

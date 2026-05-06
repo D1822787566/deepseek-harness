@@ -27,6 +27,8 @@ This package lets web-client features expose editable preferences backed by the 
 
 Feature plugins use this package to store and edit their preferences without re-implementing transport or schema handling. Mount it once per composition; it injects the `remote` service with its `settings` namespace and owns the single `settings.describe` reader in the browser.
 
+A deployment can opt authenticated remote browsers into Host-backed forms by publishing the boolean `__DSH_REMOTE_SETTINGS__` as `true` through a separate `webserver/index-inject` plugin. Reload the page after changing this deployment choice. Connection authentication and Host/Origin checks still apply; the browser's loopback identity and native document-opening actions do not change. Use a separate plugin rather than an overlay on `ui-settings`, because such an overlay makes that settings namespace read-only. References to remote memory persistence below describe the default without this opt-in.
+
 ### Configuration forms
 
 `ctx.configForms.developerTools` owns the Coding Tools switch and the shared Web and desktop preference `ui-settings.enabled`, defaulting to `true`. Its `enabled` observable publishes accepted choices and `setEnabled` uses the same ordered settings writes. Desktop and loopback Web persist to the Host document; remote Web keeps this choice in one browser-local observable until reload without issuing Host writes. This controls presentation and HTML preview permissions, not Host authorization or Session recording. Host-backed clients keep developer features disabled until the first accepted schema-resolved value arrives; missing or failed initial responses do not enable them. Later refreshes retain the last accepted choice.
@@ -103,7 +105,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define where the settings transport cannot reach; they are current package constraints.
 
-- **Non-loopback pages get no durable settings** — this Client keeps Host persistence disabled there, so a form starts `unavailable` and never crosses the wire; form writes are inert even though Connection authentication covers the API. The shared Coding Tools preference instead provides browser-local changes.
+- **Remote settings require a deployment opt-in** — without the Host-injected flag, non-loopback forms start `unavailable` and issue no Host reads or writes. The shared Coding Tools preference instead provides browser-local changes.
 
 <a id="dev-note"></a>
 ### Dev Note

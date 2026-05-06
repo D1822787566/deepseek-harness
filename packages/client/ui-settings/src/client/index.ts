@@ -12,6 +12,11 @@ import { SettingsSchemaService } from './schema.ts'
 import { ConfigForms } from './config-form.ts'
 import { SettingsDescribeMirror } from './settings-mirror.ts'
 
+declare global {
+  /** Host-rendered deployment choice; it grants no API authentication. */
+  var __DSH_REMOTE_SETTINGS__: boolean | undefined
+}
+
 export type {
   SettingsLauncherOwnerProps, SettingsGeneralItemOwnerProps, SettingsHeaderOwnerProps, SettingsOnboardingOwnerProps,
   SettingsPluginsTabOwnerProps, SettingsSectionOwnerProps, SettingsTriggerOwnerProps,
@@ -36,7 +41,7 @@ export const inject = ['remote', 'remote.settings']
 export function apply(ctx: Context): void {
   const schema = new SettingsSchemaService(ctx)
   // Every form uses the persistence mode resolved from the connected Host.
-  const persistence = ctx.remote.$host.isLoopback ? 'host' : 'memory'
+  const persistence = ctx.remote.$host.isLoopback || globalThis.__DSH_REMOTE_SETTINGS__ === true ? 'host' : 'memory'
   const mirror = new SettingsDescribeMirror(ctx, persistence)
   ctx.effect(() => {
     const disposers = [
